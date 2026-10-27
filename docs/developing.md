@@ -117,7 +117,8 @@ It needs these repository secrets:
 | --- | --- |
 | `MACOS_CERTIFICATE` | base64 of the Developer ID Application `.p12` (`base64 -i cert.p12 \| pbcopy`) |
 | `MACOS_CERTIFICATE_PASSWORD` | the `.p12` password |
-| `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD` | notarization credentials (app-specific password) |
+| `APPLE_NOTARY_KEY` | base64 of an App Store Connect API key `.p8` (Developer role, from [Users and Access, Integrations](https://appstoreconnect.apple.com/access/integrations/api)) |
+| `APPLE_NOTARY_KEY_ID`, `APPLE_NOTARY_ISSUER_ID` | that key's Key ID and the Issuer ID shown above the key list |
 | `KEYSTORE_BASE64` | base64 of the Android upload keystore (`.jks`) |
 | `KEY_ALIAS` | key alias in that keystore |
 | `KEY_PASSWORD` | store and key password |

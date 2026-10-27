@@ -9,9 +9,9 @@ name: Release
 # Required secrets:
 #   macOS    MACOS_CERTIFICATE           base64 of the Developer ID Application .p12
 #            MACOS_CERTIFICATE_PASSWORD  password of that .p12
-#            APPLE_ID                    Apple ID used for notarization
-#            APPLE_TEAM_ID               developer team id
-#            APPLE_APP_PASSWORD          app-specific password for that Apple ID
+#            APPLE_NOTARY_KEY            base64 of the App Store Connect API key (.p8)
+#            APPLE_NOTARY_KEY_ID         that key's Key ID
+#            APPLE_NOTARY_ISSUER_ID      the Issuer ID shown above the key list
 #   Android  KEYSTORE_BASE64             base64 of the upload keystore (.jks)
 #            KEY_ALIAS                   key alias inside the keystore
 #            KEY_PASSWORD                store and key password
@@ -144,12 +144,12 @@ jobs:
         env:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_NOTARY_KEY: ${{ secrets.APPLE_NOTARY_KEY }}
+          APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
         run: |
           missing=0
-          for name in MACOS_CERTIFICATE MACOS_CERTIFICATE_PASSWORD APPLE_ID APPLE_TEAM_ID APPLE_APP_PASSWORD; do
+          for name in MACOS_CERTIFICATE MACOS_CERTIFICATE_PASSWORD APPLE_NOTARY_KEY APPLE_NOTARY_KEY_ID APPLE_NOTARY_ISSUER_ID; do
             [ -n "${!name}" ] || { echo "::error::secret $name is not set"; missing=1; }
           done
           exit $missing
@@ -190,14 +190,18 @@ jobs:
 
       - name: Store notarization credentials
         env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_NOTARY_KEY: ${{ secrets.APPLE_NOTARY_KEY }}
+          APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
         run: |
+          KEY="$RUNNER_TEMP/notary.p8"
+          printf '%s' "$APPLE_NOTARY_KEY" | base64 --decode > "$KEY"
+          # The profile copies the key into the keychain, so the file can go.
           xcrun notarytool store-credentials codeplugme-notary \
-            --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
-            --password "$APPLE_APP_PASSWORD" \
+            --key "$KEY" --key-id "$APPLE_NOTARY_KEY_ID" \
+            --issuer "$APPLE_NOTARY_ISSUER_ID" \
             --keychain "$RUNNER_TEMP/build.keychain-db"
+          rm -f "$KEY"
           echo "NOTARY_PROFILE=codeplugme-notary" >> "$GITHUB_ENV"
 
       - name: Build, sign, and notarize DMG
