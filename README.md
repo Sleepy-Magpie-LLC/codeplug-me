@@ -171,6 +171,18 @@ silently drop a block, and the read-back is how you catch it. Only
 If the vendor CPS can't read a radio after this tool wrote to it, follow
 [`docs/diagnosing-cps-breakage.md`](docs/diagnosing-cps-breakage.md).
 
+## Credits
+
+Repeater data comes from these services. Thanks to them and the volunteers who
+keep their listings up to date:
+
+- [Hearham](https://hearham.com/repeaters), an open repeater directory.
+- [RadioID](https://radioid.net), the DMR ID and repeater database.
+- [RepeaterBook](https://www.repeaterbook.com), used with your own API token.
+  Its results are fetched live and never cached, per its terms.
+
+CodeplugMe isn't affiliated with or endorsed by any of these services.
+
 ## For developers
 
 Building, testing, code layout, release signing, and the protocol details that
