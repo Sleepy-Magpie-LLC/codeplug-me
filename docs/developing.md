@@ -66,7 +66,7 @@ swift tools/make-icon.swift
 android/build.sh            # debug APK
 android/build.sh test       # host JVM tests, no device or radio needed
 android/build.sh install    # build and adb install
-android/build.sh release    # release APK, unsigned
+android/build.sh release    # release APK, signed if android/key.properties exists
 android/build.sh bindings   # regenerate the Kotlin bindings
 android/build.sh clean
 ```
@@ -77,7 +77,8 @@ The Swift tests drive the real core against a synthetic all-zero codeplug image.
 
 ## Release build
 
-`./build.sh release` produces a universal (arm64 + x86_64) Release build, signed
+`./build.sh release` produces a universal (arm64 + x86_64) Release build (set
+`ARCHS=arm64` for Apple silicon only), signed
 with a Developer ID certificate and the hardened runtime, packaged as a DMG in
 `dist/`.
 
@@ -96,6 +97,30 @@ NOTARY_PROFILE=anytone-notary ./build.sh release
 ```
 
 Bump `MARKETING_VERSION` in `project.yml` to change the version in the DMG name.
+
+`android/build.sh release` signs the APK when `android/key.properties` exists
+(`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). Without it the APK is
+unsigned. The file and keystores are gitignored.
+
+## GitHub release
+
+The `Release` workflow (`.github/workflows/release.yml`, run by hand from the
+Actions tab) bumps the version, builds a signed and notarized Apple silicon DMG
+and a signed APK, publishes both as a GitHub release tagged `vX.Y.Z`, and
+commits the bump. The version comes from `MARKETING_VERSION` and
+`CURRENT_PROJECT_VERSION` in `project.yml` and is mirrored into the Android
+`versionName` and `versionCode`.
+
+It needs these repository secrets:
+
+| Secret | What |
+| --- | --- |
+| `MACOS_CERTIFICATE` | base64 of the Developer ID Application `.p12` (`base64 -i cert.p12 \| pbcopy`) |
+| `MACOS_CERTIFICATE_PASSWORD` | the `.p12` password |
+| `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD` | notarization credentials (app-specific password) |
+| `KEYSTORE_BASE64` | base64 of the Android upload keystore (`.jks`) |
+| `KEY_ALIAS` | key alias in that keystore |
+| `KEY_PASSWORD` | store and key password |
 
 ## AnyTone transfer details that are load-bearing
 

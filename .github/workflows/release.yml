@@ -1,0 +1,242 @@
+name: Release
+
+# Builds a signed, notarized Apple silicon DMG and a signed Android APK, then
+# publishes both as a GitHub release and commits the version bump.
+#
+# The version lives in project.yml (MARKETING_VERSION + CURRENT_PROJECT_VERSION)
+# and is mirrored into android/app/build.gradle.kts (versionName + versionCode).
+#
+# Required secrets:
+#   macOS    MACOS_CERTIFICATE           base64 of the Developer ID Application .p12
+#            MACOS_CERTIFICATE_PASSWORD  password of that .p12
+#            APPLE_ID                    Apple ID used for notarization
+#            APPLE_TEAM_ID               developer team id
+#            APPLE_APP_PASSWORD          app-specific password for that Apple ID
+#   Android  KEYSTORE_BASE64             base64 of the upload keystore (.jks)
+#            KEY_ALIAS                   key alias inside the keystore
+#            KEY_PASSWORD                store and key password
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Calculate Version
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.bump.outputs.new_version }}
+      build_number: ${{ steps.bump.outputs.build_number }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Bump version
+        id: bump
+        env:
+          BUMP_TYPE: ${{ github.event.inputs.bump }}
+        run: |
+          VERSION=$(sed -nE 's/.*MARKETING_VERSION: "(.*)"/\1/p' project.yml)
+          BUILD=$(sed -nE 's/.*CURRENT_PROJECT_VERSION: "(.*)"/\1/p' project.yml)
+          [ -n "$VERSION" ] && [ -n "$BUILD" ] || { echo "version not found in project.yml"; exit 1; }
+
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+          case "$BUMP_TYPE" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+
+          echo "new_version=${MAJOR}.${MINOR}.${PATCH}" >> "$GITHUB_OUTPUT"
+          echo "build_number=$((BUILD + 1))" >> "$GITHUB_OUTPUT"
+
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    needs: version
+    env:
+      NEW_VERSION: ${{ needs.version.outputs.new_version }}
+      BUILD_NUMBER: ${{ needs.version.outputs.build_number }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Rust
+        run: |
+          rustup target add aarch64-linux-android x86_64-linux-android
+          cargo install cargo-ndk --locked
+
+      - name: Apply version
+        run: |
+          sed -i -E "s/versionName = \".*\"/versionName = \"${NEW_VERSION}\"/" android/app/build.gradle.kts
+          sed -i -E "s/versionCode = [0-9]+/versionCode = ${BUILD_NUMBER}/" android/app/build.gradle.kts
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
+
+      - name: Create key.properties
+        env:
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          cat > android/key.properties <<EOF
+          storeFile=${GITHUB_WORKSPACE}/android/upload-keystore.jks
+          storePassword=${KEY_PASSWORD}
+          keyAlias=${KEY_ALIAS}
+          keyPassword=${KEY_PASSWORD}
+          EOF
+
+      - name: Build APK
+        run: android/build.sh release
+
+      - name: Rename APK
+        run: mv android/app/build/outputs/apk/release/app-release.apk "codeplugme-${NEW_VERSION}-android.apk"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: codeplugme-${{ needs.version.outputs.new_version }}-android.apk
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    needs: version
+    env:
+      NEW_VERSION: ${{ needs.version.outputs.new_version }}
+      BUILD_NUMBER: ${{ needs.version.outputs.build_number }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Apply version
+        run: |
+          sed -i '' -E "s/MARKETING_VERSION: \".*\"/MARKETING_VERSION: \"${NEW_VERSION}\"/" project.yml
+          sed -i '' -E "s/CURRENT_PROJECT_VERSION: \".*\"/CURRENT_PROJECT_VERSION: \"${BUILD_NUMBER}\"/" project.yml
+
+      - name: Import signing certificate
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 24)
+          echo "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" \
+            -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain
+          # notarytool looks up keychain profiles in the default keychain.
+          security default-keychain -s "$KEYCHAIN"
+          rm "$RUNNER_TEMP/cert.p12"
+
+          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN" \
+            | grep "Developer ID Application" | head -n 1 | sed -E 's/.*"(.*)"/\1/')
+          [ -n "$IDENTITY" ] || { echo "no Developer ID Application identity in the certificate"; exit 1; }
+          echo "SIGNING_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+
+      - name: Store notarization credentials
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          xcrun notarytool store-credentials codeplugme-notary \
+            --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --keychain "$RUNNER_TEMP/build.keychain-db"
+          echo "NOTARY_PROFILE=codeplugme-notary" >> "$GITHUB_ENV"
+
+      - name: Build, sign, and notarize DMG
+        env:
+          ARCHS: arm64
+        run: ./build.sh release
+
+      - name: Rename DMG
+        run: mv "dist/CodeplugMe-${NEW_VERSION}.dmg" "codeplugme-${NEW_VERSION}-macos-arm64.dmg"
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: codeplugme-${{ needs.version.outputs.new_version }}-macos-arm64.dmg
+
+      - name: Remove keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [version, build-android, build-macos]
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEW_VERSION: ${{ needs.version.outputs.new_version }}
+        run: |
+          gh release create "v${NEW_VERSION}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Release v${NEW_VERSION}" \
+            --generate-notes \
+            artifacts/android-apk/*.apk artifacts/macos-dmg/*.dmg
+
+  commit-version:
+    name: Commit Version Bump
+    runs-on: ubuntu-latest
+    needs: [version, release]
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Update versions and commit
+        env:
+          NEW_VERSION: ${{ needs.version.outputs.new_version }}
+          BUILD_NUMBER: ${{ needs.version.outputs.build_number }}
+        run: |
+          sed -i -E "s/MARKETING_VERSION: \".*\"/MARKETING_VERSION: \"${NEW_VERSION}\"/" project.yml
+          sed -i -E "s/CURRENT_PROJECT_VERSION: \".*\"/CURRENT_PROJECT_VERSION: \"${BUILD_NUMBER}\"/" project.yml
+          sed -i -E "s/versionName = \".*\"/versionName = \"${NEW_VERSION}\"/" android/app/build.gradle.kts
+          sed -i -E "s/versionCode = [0-9]+/versionCode = ${BUILD_NUMBER}/" android/app/build.gradle.kts
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add project.yml android/app/build.gradle.kts
+          git commit -m "chore: bump version to ${NEW_VERSION}"
+          git push
