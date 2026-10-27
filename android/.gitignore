@@ -1,0 +1,15 @@
+# Gradle / Android build outputs
+.gradle/
+build/
+app/build/
+.kotlin/
+
+# Machine-local SDK location
+local.properties
+
+# Rust cdylibs dropped in by the cargoNdk task
+app/src/main/jniLibs/
+
+# IDE
+.idea/
+*.iml

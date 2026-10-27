@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- USB host (OTG) is how every radio is reached.
+
+         Declared NOT required on purpose. Plenty of phones support OTG in
+         hardware but never declare this system feature, and a required feature
+         the device does not report makes the package installer refuse the
+         install with a bare "App not installed" and no reason given. Marking it
+         optional lets the app install anywhere and say something useful for
+         itself: the Radio screen checks for the feature at runtime and explains
+         the situation instead of the user being stuck at an unexplained
+         install failure. -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+
+    <!-- A codeplug transfer runs for minutes. It lives in a foreground service so
+         backgrounding the app cannot kill a write half-finished. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Building a codeplug from nearby repeaters downloads the listings, and
+         coarse location prefills where "nearby" is. City-level is plenty for a
+         search radius in tens of kilometres, so fine location is never asked
+         for, and denying it just means typing a place instead. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Codeplug">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Attaching a known radio opens the app and pre-grants USB permission
+                 for that device, so the primary flow (plug in, write) needs no
+                 permission dialog after the first time. -->
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                android:resource="@xml/device_filter" />
+        </activity>
+
+        <service
+            android:name=".usb.RadioTransferService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+    </application>
+</manifest>

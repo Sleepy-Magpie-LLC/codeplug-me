@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose supplies the real theme; this only needs to exist for the
+         manifest and to keep the splash background from flashing white. -->
+    <style name="Theme.Codeplug" parent="android:Theme.Material.NoActionBar" />
+</resources>

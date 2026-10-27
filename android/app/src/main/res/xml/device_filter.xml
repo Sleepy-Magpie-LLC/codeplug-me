@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Devices that should launch this app on attach and get a pre-granted USB
+  permission.
+
+  The two AnyTone entries mirror codeplugme-core's KNOWN_USB_IDS: the
+  AT-D878UVII Plus ships with either a GD32 or an STM32 USB bridge, both
+  presenting as CDC-ACM.
+
+  The QYT KT-5000 is deliberately absent. Its programming cable is a stock
+  Prolific PL2303 (067b:2303) shared with thousands of unrelated adapters;
+  claiming that id here would make this app offer to open for every PL2303
+  serial cable a user plugs into their phone. The KT-5000 is instead reached
+  by the user naming the model explicitly, exactly as on macOS.
+-->
+<resources>
+    <!-- AnyTone AT-D878UVII Plus, GD32 bridge: 28e9:018a -->
+    <usb-device vendor-id="10473" product-id="394" />
+    <!-- AnyTone AT-D878UVII Plus, STM32 bridge: 2e3c:5740 -->
+    <usb-device vendor-id="11836" product-id="22336" />
+</resources>

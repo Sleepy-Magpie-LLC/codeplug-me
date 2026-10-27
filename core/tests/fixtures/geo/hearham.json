@@ -1,0 +1,8 @@
+[
+{"id":501,"callsign":"W5LEX","latitude":27.813961,"longitude":-97.38822,"city":"Corpus Christi, TX USA","group":"IRLP","internet_node":"4216","mode":"FM","encode":"103.5","decode":"103.5","frequency":444850000,"offset":5000000,"description":"","power":"unknown","operational":1,"restriction":""},
+{"id":1450,"callsign":"K1DQ","latitude":43.5406476,"longitude":-70.8474271,"city":"Shapleigh, ME","group":"","internet_node":"","mode":"DMR    ","encode":"CC4","decode":"","frequency":145110000,"offset":-600000,"description":"","power":"unknown","operational":1,"restriction":""},
+{"id":2000,"callsign":"W1DST","latitude":42.0,"longitude":-71.0,"city":"Boston, MA","group":"","internet_node":"","mode":"D-STAR","encode":"","decode":"","frequency":145670000,"offset":-600000,"description":"","power":"unknown","operational":1,"restriction":""},
+{"id":2001,"callsign":"W1OFF","latitude":42.0,"longitude":-71.0,"city":"Boston, MA","group":"","internet_node":"","mode":"FM","encode":"100.0","decode":"","frequency":146940000,"offset":-600000,"description":"","power":"unknown","operational":0,"restriction":""},
+{"id":2002,"callsign":"W1YSF","latitude":42.1,"longitude":-71.1,"city":"Quincy, MA","group":"","internet_node":"","mode":"YSF/FM ","encode":"0.00","decode":"0.00","frequency":147000000,"offset":600000,"description":"","power":"unknown","operational":1,"restriction":""},
+{"id":2003,"callsign":"W1DCS","latitude":42.2,"longitude":-71.2,"city":"Waltham, MA","group":"","internet_node":"","mode":"FM","encode":"DCS023","decode":"","frequency":442100000,"offset":5000000,"description":"","power":"unknown","operational":1,"restriction":""}
+]

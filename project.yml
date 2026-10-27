@@ -1,0 +1,62 @@
+name: CodeplugMe
+options:
+  bundleIdPrefix: me.faulk.codeplugme
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_OBJC_BRIDGING_HEADER: CodeplugMe/BridgingHeader.h
+    LIBRARY_SEARCH_PATHS: $(SRCROOT)
+    HEADER_SEARCH_PATHS:
+      - $(SRCROOT)/core/include
+    OTHER_LDFLAGS:
+      - -lcodeplugme_core
+      - -framework IOKit
+      - -framework CoreFoundation
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+
+targets:
+  CodeplugMe:
+    type: application
+    platform: macOS
+    sources:
+      - path: CodeplugMe
+        excludes:
+          - "**/.DS_Store"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.faulk.codeplugme.mac
+        PRODUCT_NAME: CodeplugMe
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: CodeplugMe
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        SYMROOT: $(SRCROOT)/build
+    preBuildScripts:
+      - name: "Build Rust Library"
+        script: |
+          "${SRCROOT}/build-rust.sh"
+        basedOnDependencyAnalysis: false
+    scheme:
+      testTargets:
+        - CodeplugMeTests
+
+  CodeplugMeTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: CodeplugMeTests
+    dependencies:
+      - target: CodeplugMe
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.faulk.codeplugme.mac.tests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.0"
+        MACOSX_DEPLOYMENT_TARGET: "13.0"

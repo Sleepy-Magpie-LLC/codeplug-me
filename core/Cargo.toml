@@ -1,0 +1,48 @@
+[package]
+name = "codeplugme-core"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Protocol and codeplug core for programming the AnyTone AT-D878UVII Plus and QYT KT-5000 over USB serial"
+
+[lib]
+name = "codeplugme_core"
+path = "src/lib.rs"
+# staticlib for the CodeplugMe Swift app (linked via C FFI, see src/ffi.rs);
+# rlib so the CLI keeps depending on this crate normally; cdylib for Android,
+# where the UniFFI surface (src/api.rs) is loaded through JNA, and for
+# uniffi-bindgen's library mode on the host.
+crate-type = ["staticlib", "rlib", "cdylib"]
+
+# uniffi-bindgen CLI wrapper; only built when generating bindings.
+[[bin]]
+name = "uniffi-bindgen"
+path = "uniffi-bindgen.rs"
+required-features = ["cli"]
+
+[dependencies]
+# Desktop-only: `serialport` reaches for IOKit on macOS and libudev on Linux,
+# neither of which exists on Android. Everything above `Transport` is portable,
+# so the crate gates the serial backend rather than the protocol layers.
+serialport = { version = "4.6", optional = true }
+thiserror = "2.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uniffi = { version = "0.29", optional = true }
+# HTTP for the repeater-database import (src/geo/net.rs). rustls rather than
+# the platform TLS so the same code builds for macOS and the Android NDK.
+ureq = { version = "3", optional = true }
+
+[features]
+default = ["desktop"]
+# The macOS/CLI build: real serial ports, port enumeration, and the C ABI.
+desktop = ["dep:serialport", "net"]
+# The Android build: the UniFFI surface in `api.rs`, with the transport
+# supplied by the host language instead of by `serialport`.
+uniffi-api = ["dep:uniffi", "net"]
+# Network fetching for the repeater import. The parsers and builder in
+# src/geo build without it.
+net = ["dep:ureq"]
+# Pulls in uniffi's own CLI for the uniffi-bindgen bin; never needed by the
+# library itself.
+cli = ["uniffi-api", "uniffi/cli"]

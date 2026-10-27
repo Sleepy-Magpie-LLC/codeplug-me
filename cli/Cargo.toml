@@ -1,0 +1,16 @@
+[package]
+name = "codeplugme-cli"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "CLI to back up and restore AnyTone AT-D878UVII Plus codeplugs over USB serial"
+
+[[bin]]
+name = "codeplugme-cli"
+path = "src/main.rs"
+
+[dependencies]
+# The CLI drives real serial ports, so it needs the desktop backend.
+codeplugme-core = { path = "../core", features = ["desktop"] }
+clap = { version = "4.5", features = ["derive"] }
+serde_json = "1"
