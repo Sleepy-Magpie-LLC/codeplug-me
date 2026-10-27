@@ -72,6 +72,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          missing=0
+          for name in KEYSTORE_BASE64 KEY_ALIAS KEY_PASSWORD; do
+            [ -n "${!name}" ] || { echo "::error::secret $name is not set"; missing=1; }
+          done
+          exit $missing
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -127,6 +139,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Check secrets
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          missing=0
+          for name in MACOS_CERTIFICATE MACOS_CERTIFICATE_PASSWORD APPLE_ID APPLE_TEAM_ID APPLE_APP_PASSWORD; do
+            [ -n "${!name}" ] || { echo "::error::secret $name is not set"; missing=1; }
+          done
+          exit $missing
 
       - name: Install XcodeGen
         run: brew install xcodegen
