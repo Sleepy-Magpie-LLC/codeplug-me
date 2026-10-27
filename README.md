@@ -38,6 +38,11 @@ For now you build it from source.
 3. For the command-line tool, run `cargo build --release`. The binary is
    `target/release/codeplugme-cli`.
 4. For the Android app, see [`android/README.md`](android/README.md).
+5. To build both release deliverables at once, run `./build-all.sh`. It puts an
+   Apple silicon DMG and the Android release APK in `dist/`. Pass `macos` or
+   `android` to build just one. The APK is signed when `android/key.properties`
+   exists (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`), otherwise
+   it is unsigned.
 
 No drivers are needed on macOS. The AnyTone shows up as `/dev/cu.usbmodem*` and
 the KT-5000's cable as `/dev/cu.usbserial*`.

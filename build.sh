@@ -5,7 +5,8 @@
 #
 # Usage:
 #   ./build.sh              Local Debug build, host arch only, ad-hoc signed.
-#   ./build.sh release      Universal (arm64 + x86_64) Release build, signed
+#   ./build.sh release      Universal (arm64 + x86_64) Release build (set
+#                           ARCHS=arm64 for Apple silicon only), signed
 #                           with a Developer ID cert if one is available,
 #                           packaged as a DMG in dist/, notarized when a
 #                           notarytool keychain profile is provided.
@@ -38,7 +39,7 @@ case "$COMMAND" in
         ;;
     release)
         CONFIGURATION="Release"
-        BUILD_ARCHS="arm64 x86_64"
+        BUILD_ARCHS="${ARCHS:-arm64 x86_64}"
         ONLY_ACTIVE="NO"
         ;;
     *)

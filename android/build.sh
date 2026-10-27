@@ -123,9 +123,11 @@ case "$CMD" in
         echo "==> ./gradlew assembleRelease"
         ./gradlew assembleRelease
         report_apk "$(newest_apk release)"
-        echo ""
-        echo "    Note: unsigned. Sign it before installing on a device that"
-        echo "    does not allow debug builds."
+        if [ ! -f key.properties ]; then
+            echo ""
+            echo "    Note: unsigned (no android/key.properties). Sign it before"
+            echo "    installing on a device that does not allow debug builds."
+        fi
         ;;
 
     test)
