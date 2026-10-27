@@ -39,11 +39,18 @@ How each source is used:
 - **RepeaterBook** needs approved access. Each user makes a personal token
   under *API Apps* on repeaterbook.com and enters it, plus a contact email, in
   the app's settings.
-  - The email goes in the User-Agent, which RepeaterBook requires.
+  - The token is kept in the Keychain on macOS. On Android it is encrypted
+    with an Android Keystore key before going into private preferences.
+  - Requests carry the fixed User-Agent
+    `CodeplugMe/1.0 (+https://sleepymagpie.com/tools/codeplug-me; winter@faulk.me)`, which is the value
+    registered with RepeaterBook.
   - Results are fetched live and never cached, because RepeaterBook's terms
     rule out offline copies.
   - The app shows "Data courtesy of RepeaterBook.com" whenever RepeaterBook
     results are listed.
+  - Searches are capped locally (`core/src/geo/rate_limit.rs`): 10 seconds
+    apart, 10 an hour and 30 a day. Failed requests count too. The history
+    lives in the cache directory, so the caps hold across restarts.
   - The API has no radius search. US queries go by state (FIPS `state_id`);
     other countries go by country, and the core filters by distance.
 

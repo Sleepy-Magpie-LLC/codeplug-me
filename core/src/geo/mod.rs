@@ -17,6 +17,7 @@ pub mod build;
 pub mod distance;
 #[cfg(feature = "net")]
 pub mod net;
+pub mod rate_limit;
 pub mod sources;
 pub mod tone;
 
@@ -211,7 +212,8 @@ pub fn select(query: &GeoQuery, doc: &Document, records: Vec<Repeater>) -> Vec<R
 /// Download from every source in `query`, then [`select`] against `doc`.
 ///
 /// `cache_dir` holds the free sources' full downloads for a day.
-/// RepeaterBook is never cached; its terms rule out offline copies.
+/// RepeaterBook is never cached; its terms rule out offline copies. It keeps
+/// its request history there instead, for the limits in [`rate_limit`].
 #[cfg(feature = "net")]
 pub fn fetch(
     query: &GeoQuery,
@@ -242,6 +244,7 @@ pub fn fetch(
                     query.country.as_deref(),
                     query.state.as_deref(),
                     analog_only,
+                    cache_dir,
                 )?)?
             }
         };

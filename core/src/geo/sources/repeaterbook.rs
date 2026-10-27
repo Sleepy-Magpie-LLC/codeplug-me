@@ -245,7 +245,7 @@ pub fn explain_error(status: u16, body: &[u8]) -> String {
         }
         "ua_mismatch" => {
             "RepeaterBook ties the token to a User-Agent and this app's did not \
-             match. Check the contact email in settings matches the one on file."
+             match. The app sends \"CodeplugMe/1.0 (+https://sleepymagpie.com/tools/codeplug-me; winter@faulk.me)\"."
         }
         "rate_limited" => "Too many requests. Wait a few minutes before fetching again.",
         _ => "",

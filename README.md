@@ -7,6 +7,17 @@ manufacturer's Windows-only CPS.
 It comes as a macOS app, an Android app, and a command-line tool, all built on
 the same Rust core.
 
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/macos.png" alt="CodeplugMe on macOS showing the KT-5000 channel table" width="640"></td>
+    <td align="center"><img src="docs/screenshots/android.png" alt="CodeplugMe on Android showing the KT-5000 channel list" width="200"></td>
+  </tr>
+  <tr>
+    <td align="center">macOS</td>
+    <td align="center">Android</td>
+  </tr>
+</table>
+
 ## Supported radios
 
 | Radio | What you can edit |

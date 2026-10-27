@@ -8,6 +8,7 @@
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
+use crate::geo::rate_limit;
 use crate::geo::sources::repeaterbook;
 use crate::geo::RepeaterBookAuth;
 
@@ -30,6 +31,10 @@ const TIMEOUT: Duration = Duration::from_secs(90);
 fn user_agent() -> String {
     format!("codeplug-me/{}", env!("CARGO_PKG_VERSION"))
 }
+
+/// The User-Agent registered with RepeaterBook, which denies API access to
+/// any request whose User-Agent does not match it.
+pub const REPEATERBOOK_USER_AGENT: &str = "CodeplugMe/1.0 (+https://sleepymagpie.com/tools/codeplug-me; winter@faulk.me)";
 
 /// An agent that hands back non-2xx responses instead of erroring, so the
 /// error body can be shown.
@@ -107,12 +112,15 @@ pub fn fetch_radioid(cache_dir: &Path) -> Result<Vec<u8>, String> {
     cached_get("RadioID", RADIOID_URL, cache_dir, "radioid.json")
 }
 
-/// One RepeaterBook export query, never cached.
+/// One RepeaterBook export query, never cached. Refused before sending when
+/// it would break the local limits in [`rate_limit`], whose history lives in
+/// `cache_dir`.
 pub fn fetch_repeaterbook(
     auth: &RepeaterBookAuth,
     country: Option<&str>,
     state: Option<&str>,
     analog_only: bool,
+    cache_dir: &Path,
 ) -> Result<Vec<u8>, String> {
     let token = auth.token.trim();
     let contact = auth.contact.trim();
@@ -120,6 +128,7 @@ pub fn fetch_repeaterbook(
         return Err("RepeaterBook needs a token and contact email in settings".into());
     }
     let params = repeaterbook::query_params(country, state, analog_only)?;
+    rate_limit::acquire(cache_dir)?;
     let north_america = country.is_some_and(|c| {
         ["United States", "Canada", "Mexico"]
             .iter()
@@ -132,7 +141,7 @@ pub fn fetch_repeaterbook(
     };
     let mut req = agent()
         .get(url)
-        .header("User-Agent", format!("{} ({contact})", user_agent()))
+        .header("User-Agent", REPEATERBOOK_USER_AGENT)
         .header("X-RB-App-Token", token);
     for (k, v) in &params {
         req = req.query(*k, v);
@@ -164,9 +173,14 @@ mod tests {
             token: " ".into(),
             contact: "a@b.c".into(),
         };
-        let err = fetch_repeaterbook(&auth, Some("United States"), Some("Colorado"), false)
+        let err = fetch_repeaterbook(&auth, Some("United States"), Some("Colorado"), false, &std::env::temp_dir())
             .unwrap_err();
         assert!(err.contains("token"), "{err}");
+    }
+
+    #[test]
+    fn repeaterbook_user_agent_matches_the_registered_value() {
+        assert_eq!(REPEATERBOOK_USER_AGENT, "CodeplugMe/1.0 (+https://sleepymagpie.com/tools/codeplug-me; winter@faulk.me)");
     }
 }
 

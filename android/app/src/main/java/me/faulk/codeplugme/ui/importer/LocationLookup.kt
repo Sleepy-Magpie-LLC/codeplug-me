@@ -14,7 +14,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import me.faulk.codeplugme.model.RepeaterBookAuth
 
 /**
  * The phone's location and place names, without Google Play Services.
@@ -110,35 +109,4 @@ object LocationLookup {
     }
 
     private const val FIX_TIMEOUT_MS = 15_000L
-}
-
-/**
- * The user's RepeaterBook token and contact email, in private preferences.
- *
- * RepeaterBook binds each app token to a User-Agent naming a contact address,
- * so both are the user's own and nothing here has a default.
- */
-object RepeaterBookPrefs {
-
-    /** The saved credentials, or null unless both are set. */
-    fun load(context: Context): RepeaterBookAuth? {
-        val p = prefs(context)
-        val token = p.getString(KEY_TOKEN, null).orEmpty()
-        val contact = p.getString(KEY_CONTACT, null).orEmpty()
-        return if (token.isBlank() || contact.isBlank()) null else RepeaterBookAuth(token, contact)
-    }
-
-    /** Save both fields; blank ones clear the credentials. */
-    fun save(context: Context, token: String, contact: String) {
-        prefs(context).edit()
-            .putString(KEY_TOKEN, token.trim())
-            .putString(KEY_CONTACT, contact.trim())
-            .apply()
-    }
-
-    private fun prefs(context: Context) =
-        context.getSharedPreferences("repeaterbook", Context.MODE_PRIVATE)
-
-    private const val KEY_TOKEN = "token"
-    private const val KEY_CONTACT = "contact"
 }
