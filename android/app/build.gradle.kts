@@ -31,8 +31,8 @@ android {
         // backgrounded.
         minSdk = 29
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.1.1"
+        versionCode = 3
+        versionName = "0.1.2"
 
         // Only the ABIs we actually cross-compile the core for. JNA's AAR
         // carries jnidispatch for several more (armeabi, mips, x86); without
